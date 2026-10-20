@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>密室逃脫統計</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e8eef7;
+      --muted: #8b9bb4;
+      --accent: #5b9fd4;
+      --accent-dim: #3a6a94;
+      --gold: #e8b84a;
+      --green: #5cb88a;
+      --row-hover: #1e2a3d;
+      --radius: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,.35);
+      --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 1.25rem 1rem 3rem;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: clamp(1.4rem, 4vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    header h1 .icon {
+      width: 1.15em;
+      height: 1.15em;
+      flex-shrink: 0;
+    }
+
+    header p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 0.35rem;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      align-items: flex-end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      flex: 1 1 140px;
+      min-width: 120px;
+    }
+
+    .field label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: none;
+      letter-spacing: 0.03em;
+    }
+
+    .field input,
+    .field select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      width: 100%;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91, 159, 212, 0.2);
+    }
+
+    .field input::placeholder { color: var(--muted); opacity: 0.7; }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: center;
+      margin-bottom: 0.85rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .meta strong { color: var(--text); font-weight: 600; }
+
+    .city-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .city-pills button {
+      font-family: inherit;
+      font-size: 0.8rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+
+    .city-pills button:hover {
+      border-color: var(--accent-dim);
+      color: var(--text);
+    }
+
+    .city-pills button.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      min-width: 640px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.78rem;
+      text-align: left;
+      padding: 0.7rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    thead th.sortable {
+      cursor: pointer;
+    }
+
+    thead th.sortable:hover { color: var(--text); }
+
+    thead th .sort-ind {
+      display: inline-block;
+      margin-left: 0.25rem;
+      opacity: 0.35;
+      font-size: 0.7em;
+    }
+
+    thead th.active .sort-ind { opacity: 1; color: var(--accent); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .12s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody tr:hover { background: var(--row-hover); }
+
+    td {
+      padding: 0.65rem 0.85rem;
+      vertical-align: middle;
+    }
+
+    td.name {
+      font-weight: 600;
+      color: var(--text);
+      max-width: 200px;
+    }
+
+    td.city {
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .badge.上海 { color: #7eb8e8; border-color: #3a5a7a; }
+    .badge.廣州 { color: #8fd4a8; border-color: #3a6a50; }
+    .badge.高雄 { color: #e8c07a; border-color: #6a5530; }
+
+    td.num {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    td.num.avg {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    td.num.empty { color: #4a5568; }
+
+    .rank-cell {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    footer {
+      margin-top: 1.25rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 1rem 0.65rem 2.5rem; }
+      .controls { gap: 0.6rem; }
+      .field { flex: 1 1 100%; }
+      td.name { max-width: 140px; }
+      table { font-size: 0.85rem; min-width: 580px; }
+      thead th, td { padding: 0.55rem 0.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>
+        <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="3" y="10" width="18" height="11" rx="2" stroke="#5b9fd4" stroke-width="1.6"/>
+          <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#5b9fd4" stroke-width="1.6" stroke-linecap="round"/>
+          <circle cx="12" cy="15.5" r="1.4" fill="#e8b84a"/>
+        </svg>
+        密室逃脫統計
+      </h1>
+      <p>四人評分對照 · 平均名次愈低愈佳</p>
+    </header>
+
+    <div class="controls">
+      <div class="field" style="flex: 2 1 200px;">
+        <label for="search">搜尋店名</label>
+        <input type="search" id="search" placeholder="輸入關鍵字…" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="sort">排序</label>
+        <select id="sort">
+          <option value="avg-asc" selected>平均名次 ↑</option>
+          <option value="avg-desc">平均名次 ↓</option>
+          <option value="name-asc">店名 A→Z</option>
+          <option value="name-desc">店名 Z→A</option>
+          <option value="city-asc">城市 A→Z</option>
+          <option value="city-desc">城市 Z→A</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="meta">
+      <div class="city-pills" id="cityPills" role="group" aria-label="城市篩選">
+        <button type="button" data-city="" class="active">全部</button>
+        <button type="button" data-city="上海">上海</button>
+        <button type="button" data-city="高雄">高雄</button>
+        <button type="button" data-city="廣州">廣州</button>
+      </div>
+      <span>顯示 <strong id="count">0</strong>／<strong id="total">0</strong> 間</span>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="name">店名<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="city">城市<span class="sort-ind">↕</span></th>
+              <th>鏗</th>
+              <th>健</th>
+              <th>柏</th>
+              <th>輝</th>
+              <th class="sortable active" data-sort="avg">平均<span class="sort-ind">↑</span></th>
+              <th>評分人數</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div id="empty" class="empty-state" hidden>找不到符合條件的密室。</div>
+    </div>
+
+    <footer>資料來源 comparison_table.csv · 靜態原型 · 本地瀏覽</footer>
+  </div>
+
+  <script>
+    // 資料來自 /workspace/escape-room-rankings/comparison_table.csv
+    const ROOMS = [
+      { name: "玫瑰古堡", city: "廣州", keng: 1, jian: 1, bo: 1, fai: 1, raters: 4, avg: 1 },
+      { name: "樓蘭古墓1", city: "上海", keng: 2, jian: 3, bo: 2, fai: 2, raters: 4, avg: 2.25 },
+      { name: "奪魂獄：滑進焚化爐", city: "高雄", keng: null, jian: 2, bo: 4, fai: null, raters: 2, avg: 3 },
+      { name: "樓蘭古墓2", city: "廣州", keng: 6, jian: 8, bo: 3, fai: 4, raters: 4, avg: 5.25 },
+      { name: "神靈的種子", city: "廣州", keng: 3, jian: 5, bo: 7, fai: 6, raters: 4, avg: 5.25 },
+      { name: "夜探黎城", city: "廣州", keng: 10, jian: 4, bo: 6, fai: 3, raters: 4, avg: 5.75 },
+      { name: "活力素", city: "上海", keng: 4, jian: 6, bo: 8, fai: 8, raters: 4, avg: 6.5 },
+      { name: "盜天命之道", city: "廣州", keng: 5, jian: 7, bo: 9, fai: 5, raters: 4, avg: 6.5 },
+      { name: "格林萊旅店", city: "上海", keng: 7, jian: 9, bo: 5, fai: 7, raters: 4, avg: 7 },
+      { name: "沉睡魔咒", city: "廣州", keng: 12, jian: 10, bo: 10, fai: 11, raters: 4, avg: 10.75 },
+      { name: "阿茲卡班", city: "廣州", keng: 8, jian: 13, bo: 12, fai: 12, raters: 4, avg: 11.25 },
+      { name: "艾洛拉", city: "上海", keng: 11, jian: 11, bo: 11, fai: 14, raters: 4, avg: 11.75 },
+      { name: "黑血（廣州）", city: "廣州", keng: null, jian: 12, bo: null, fai: null, raters: 1, avg: 12 },
+      { name: "消失的魔法", city: "廣州", keng: 15, jian: 14, bo: 13, fai: 9, raters: 4, avg: 12.75 },
+      { name: "決戰加勒比", city: "廣州", keng: 9, jian: 16, bo: 15, fai: 16, raters: 4, avg: 14 },
+      { name: "黑血（上海）", city: "上海", keng: 13, jian: 17, bo: 16, fai: 10, raters: 4, avg: 14 },
+      { name: "完美逃脫", city: "上海", keng: 18, jian: 15, bo: 14, fai: 13, raters: 4, avg: 15 },
+      { name: "木乃伊", city: "上海", keng: 19, jian: 18, bo: 17, fai: 15, raters: 4, avg: 17.25 },
+      { name: "鎮靈村", city: "廣州", keng: 17, jian: 20, bo: 19, fai: 18, raters: 4, avg: 18.5 },
+      { name: "彌生", city: "廣州", keng: 21, jian: 19, bo: 18, fai: 17, raters: 4, avg: 18.75 },
+      { name: "看不見的女孩", city: "廣州", keng: 16, jian: 21, bo: 20, fai: null, raters: 3, avg: 19 },
+      { name: "黑暗寓言", city: "上海", keng: 20, jian: 22, bo: 21, fai: 23, raters: 4, avg: 21.5 },
+      { name: "觀星社1937", city: "廣州", keng: 14, jian: 28, bo: 26, fai: 20, raters: 4, avg: 22 },
+      { name: "沙盒", city: "上海", keng: 23, jian: 24, bo: 23, fai: 19, raters: 4, avg: 22.25 },
+      { name: "心魔", city: "高雄", keng: null, jian: 23, bo: 22, fai: null, raters: 2, avg: 22.5 },
+      { name: "土豆的飛翔物語", city: "廣州", keng: 22, jian: 26, bo: 24, fai: null, raters: 3, avg: 24 },
+      { name: "後會無期", city: "廣州", keng: null, jian: 25, bo: null, fai: null, raters: 1, avg: 25 },
+      { name: "迷霧中的心弦", city: "廣州", keng: 24, jian: 27, bo: 25, fai: null, raters: 3, avg: 25.33 },
+      { name: "小紅帽", city: "廣州", keng: 25, jian: 30, bo: 28, fai: 25, raters: 4, avg: 27 },
+      { name: "暗網", city: "廣州", keng: 28, jian: 31, bo: 29, fai: 21, raters: 4, avg: 27.25 },
+      { name: "旅遊團的誘惑", city: "廣州", keng: 26, jian: 29, bo: 27, fai: null, raters: 3, avg: 27.33 },
+      { name: "始作俑者", city: "廣州", keng: 29, jian: 33, bo: 31, fai: 22, raters: 4, avg: 28.75 },
+      { name: "猛男培訓班", city: "廣州", keng: 27, jian: 32, bo: 30, fai: null, raters: 3, avg: 29.67 },
+      { name: "消失的魔杖", city: "廣州", keng: 32, jian: 34, bo: 32, fai: 26, raters: 4, avg: 31 },
+      { name: "終夜廻", city: "廣州", keng: 30, jian: 36, bo: 34, fai: 27, raters: 4, avg: 31.75 },
+      { name: "費拉的回憶", city: "上海", keng: 34, jian: 37, bo: 35, fai: 24, raters: 4, avg: 32.5 },
+      { name: "門後世界", city: "廣州", keng: 31, jian: 38, bo: 36, fai: 29, raters: 4, avg: 33.5 },
+      { name: "時空幻域", city: "高雄", keng: null, jian: 35, bo: 33, fai: null, raters: 2, avg: 34 },
+      { name: "瓶中小人", city: "廣州", keng: 33, jian: 39, bo: 37, fai: 28, raters: 4, avg: 34.25 },
+      { name: "地獄列車", city: "廣州", keng: 35, jian: 40, bo: 38, fai: 30, raters: 4, avg: 35.75 }
+    ];
+
+    const state = {
+      city: "",
+      query: "",
+      sort: "avg-asc"
+    };
+
+    const tbody = document.getElementById("tbody");
+    const empty = document.getElementById("empty");
+    const countEl = document.getElementById("count");
+    const totalEl = document.getElementById("total");
+    const searchEl = document.getElementById("search");
+    const sortEl = document.getElementById("sort");
+    const cityPills = document.getElementById("cityPills");
+
+    totalEl.textContent = String(ROOMS.length);
+
+    function fmtRank(v) {
+      if (v == null || v === "") return "—";
+      return String(v);
+    }
+
+    function fmtAvg(v) {
+      if (Number.isInteger(v)) return String(v);
+      return String(v);
+    }
+
+    function compare(a, b, key, dir) {
+      let av = a[key];
+      let bv = b[key];
+      if (key === "name" || key === "city") {
+        av = av || "";
+        bv = bv || "";
+        const c = av.localeCompare(bv, "zh-Hant");
+        return dir === "asc" ? c : -c;
+      }
+      av = av == null ? Infinity : Number(av);
+      bv = bv == null ? Infinity : Number(bv);
+      return dir === "asc" ? av - bv : bv - av;
+    }
+
+    function filtered() {
+      const q = state.query.trim().toLowerCase();
+      let list = ROOMS.filter((r) => {
+        if (state.city && r.city !== state.city) return false;
+        if (q && !r.name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+      const [key, dir] = state.sort.split("-");
+      list = list.slice().sort((a, b) => compare(a, b, key, dir));
+      return list;
+    }
+
+    function syncSortHeaders() {
+      const [key, dir] = state.sort.split("-");
+      document.querySelectorAll("thead th.sortable").forEach((th) => {
+        const k = th.dataset.sort;
+        const ind = th.querySelector(".sort-ind");
+        if (k === key) {
+          th.classList.add("active");
+          ind.textContent = dir === "asc" ? "↑" : "↓";
+        } else {
+          th.classList.remove("active");
+          ind.textContent = "↕";
+        }
+      });
+      // keep select in sync
+      const val = state.sort;
+      if ([...sortEl.options].some((o) => o.value === val)) {
+        sortEl.value = val;
+      }
+    }
+
+    function render() {
+      const list = filtered();
+      countEl.textContent = String(list.length);
+      syncSortHeaders();
+
+      if (list.length === 0) {
+        tbody.innerHTML = "";
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+
+      tbody.innerHTML = list.map((r) => {
+        const rank = (v) =>
+          v == null
+            ? `<td class="num empty">—</td>`
+            : `<td class="num rank-cell">${fmtRank(v)}</td>`;
+        return `<tr>
+          <td class="name">${escapeHtml(r.name)}</td>
+          <td class="city"><span class="badge ${escapeHtml(r.city)}">${escapeHtml(r.city)}</span></td>
+          ${rank(r.keng)}
+          ${rank(r.jian)}
+          ${rank(r.bo)}
+          ${rank(r.fai)}
+          <td class="num avg">${fmtAvg(r.avg)}</td>
+          <td class="num">${r.raters}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    searchEl.addEventListener("input", () => {
+      state.query = searchEl.value;
+      render();
+    });
+
+    sortEl.addEventListener("change", () => {
+      state.sort = sortEl.value;
+      render();
+    });
+
+    cityPills.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-city]");
+      if (!btn) return;
+      state.city = btn.dataset.city;
+      cityPills.querySelectorAll("button").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+      render();
+    });
+
+    document.querySelectorAll("thead th.sortable").forEach((th) => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        const [curKey, curDir] = state.sort.split("-");
+        if (curKey === key) {
+          state.sort = `${key}-${curDir === "asc" ? "desc" : "asc"}`;
+        } else {
+          state.sort = `${key}-asc`;
+        }
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
