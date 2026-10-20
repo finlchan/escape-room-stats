@@ -307,6 +307,14 @@
         <select id="sort">
           <option value="avg-asc" selected>平均名次 ↑</option>
           <option value="avg-desc">平均名次 ↓</option>
+          <option value="keng-asc">鏗名次 ↑</option>
+          <option value="keng-desc">鏗名次 ↓</option>
+          <option value="jian-asc">健名次 ↑</option>
+          <option value="jian-desc">健名次 ↓</option>
+          <option value="bo-asc">柏名次 ↑</option>
+          <option value="bo-desc">柏名次 ↓</option>
+          <option value="fai-asc">輝名次 ↑</option>
+          <option value="fai-desc">輝名次 ↓</option>
           <option value="name-asc">店名 A→Z</option>
           <option value="name-desc">店名 Z→A</option>
           <option value="city-asc">城市 A→Z</option>
@@ -332,10 +340,10 @@
             <tr>
               <th class="sortable" data-sort="name">店名<span class="sort-ind">↕</span></th>
               <th class="sortable" data-sort="city">城市<span class="sort-ind">↕</span></th>
-              <th>鏗</th>
-              <th>健</th>
-              <th>柏</th>
-              <th>輝</th>
+              <th class="sortable" data-sort="keng">鏗<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="jian">健<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="bo">柏<span class="sort-ind">↕</span></th>
+              <th class="sortable" data-sort="fai">輝<span class="sort-ind">↕</span></th>
               <th class="sortable active" data-sort="avg">平均<span class="sort-ind">↑</span></th>
               <th>評分人數</th>
             </tr>
@@ -420,6 +428,10 @@
       return String(v);
     }
 
+    function missingRank(v) {
+      return v == null || v === "";
+    }
+
     function compare(a, b, key, dir) {
       let av = a[key];
       let bv = b[key];
@@ -429,8 +441,14 @@
         const c = av.localeCompare(bv, "zh-Hant");
         return dir === "asc" ? c : -c;
       }
-      av = av == null ? Infinity : Number(av);
-      bv = bv == null ? Infinity : Number(bv);
+      const aMissing = missingRank(av);
+      const bMissing = missingRank(bv);
+      if (aMissing || bMissing) {
+        if (aMissing && bMissing) return 0;
+        return aMissing ? 1 : -1;
+      }
+      av = Number(av);
+      bv = Number(bv);
       return dir === "asc" ? av - bv : bv - av;
     }
 
